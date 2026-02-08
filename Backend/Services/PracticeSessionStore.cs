@@ -20,6 +20,11 @@ public sealed class PracticeSessionStore
         return session;
     }
 
+    public IEnumerable<PracticeSession> GetAll()
+    {
+        return _sessions.Values.OrderByDescending(s => s.CreatedAt);
+    }
+
     public bool TryGetState(Guid sessionId, out PracticeState state)
     {
         if (_sessions.TryGetValue(sessionId, out var session))

@@ -6,7 +6,7 @@ public static class WordsEndpoints
 {
     public static RouteGroupBuilder MapWordsEndpoints(this RouteGroupBuilder apiGroup)
     {
-        var wordsGroup = apiGroup.MapGroup("/words").WithTags("Words");
+        var wordsGroup = apiGroup.MapGroup("/words").WithTags("Words").RequireAuthorization();
 
         wordsGroup.MapGet("/", (WordBankRepository wordBankRepository, ILoggerFactory loggerFactory) =>
         {

@@ -1,15 +1,20 @@
 "use client";
 
+import { withAuthenticator } from "@aws-amplify/ui-react";
+import "@aws-amplify/ui-react/styles.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   completeModel,
   createPracticeSession,
+  getPracticeSessions,
+  getPracticeSession,
   getWords,
   recordAttempt,
   resetPracticeSession
 } from "@/lib/api-client";
 import { getCurrentSegmentationStep, getCurrentWord, getPriorityLabel } from "@/lib/practice-engine";
-import { AttemptOutcome, PracticeState } from "@/lib/types";
+import { AttemptOutcome, PracticeState, PracticeSessionSummary } from "@/lib/types";
+import { SessionList } from "./components/SessionList";
 
 function getPhaseTitle(phase: PracticeState["phase"]): string {
   return phase === "attempt" ? "Reading attempt" : "Adult modeling";
@@ -29,15 +34,41 @@ function formatDueIn(turns: number): string {
   return `${turns} turn${turns === 1 ? "" : "s"}`;
 }
 
-export default function Home() {
+function Home() {
+  const [view, setView] = useState<"list" | "session">("list");
+  const [sessions, setSessions] = useState<PracticeSessionSummary[]>([]);
+  
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [state, setState] = useState<PracticeState | null>(null);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
-  const initializeSession = useCallback(async () => {
+  // Load list of sessions on mount
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    
+    // Initial fetch
+    refreshList();
+  }, []);
+
+  const refreshList = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const list = await getPracticeSessions();
+      setSessions(list);
+      setView("list");
+    } catch (err) {
+      console.warn("Failed to load sessions", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const createSession = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -46,6 +77,7 @@ export default function Home() {
       const response = await createPracticeSession(words.map((word) => word.id));
       setSessionId(response.sessionId);
       setState(response.state);
+      setView("session");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to start a practice session.";
       setError(message);
@@ -54,14 +86,23 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    if (initializedRef.current) {
-      return;
-    }
+  const selectSession = useCallback(async (id: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+          const response = await getPracticeSession(id);
+          setSessionId(response.sessionId);
+          setState(response.state);
+          setView("session");
+      } catch (err) {
+          setError("Failed to load session details.");
+      } finally {
+          setIsLoading(false);
+      }
+  }, []);
 
-    initializedRef.current = true;
-    void initializeSession();
-  }, [initializeSession]);
+  // Removed old auto-start effect
+  // useEffect(() => { ... }, [initializeSession]);
 
   const runAction = useCallback(
     async (action: (activeSessionId: string) => Promise<{ state: PracticeState }>) => {
@@ -97,8 +138,32 @@ export default function Home() {
   }, [runAction]);
 
   const handleReset = useCallback(async () => {
-    await runAction((activeSessionId) => resetPracticeSession(activeSessionId));
-  }, [runAction]);
+    // Instead of resetting state, go back to list
+    setView("list");
+    setSessionId(null);
+    setState(null);
+    void refreshList();
+  }, [refreshList]);
+
+  if (view === "list") {
+      return (
+        <main className="page-shell">
+            <header className="hero">
+                <h1>Reading Practice Dashboard</h1>
+                <p>Select a session to resume or start a new practice loop.</p>
+            </header>
+            {isLoading ? (
+                 <section className="practice-panel"><p>Loading sessions...</p></section>
+            ) : (
+                <SessionList 
+                    sessions={sessions} 
+                    onSelectSession={selectSession} 
+                    onCreateNew={createSession} 
+                />
+            )}
+        </main>
+      );
+  }
 
   if (isLoading || !state) {
     return (
@@ -111,8 +176,8 @@ export default function Home() {
           <section className="practice-panel">
             <p className="phase-note">{error}</p>
             <div className="action-row">
-              <button type="button" className="btn btn-info" onClick={() => void initializeSession()}>
-                Retry
+              <button type="button" className="btn btn-info" onClick={() => void handleReset()}>
+                Back to Dashboard
               </button>
             </div>
           </section>
@@ -287,7 +352,7 @@ export default function Home() {
 
           <div className="reset-row">
             <button type="button" className="btn btn-reset" disabled={isSubmitting} onClick={() => void handleReset()}>
-              Reset session
+              Back to Dashboard
             </button>
           </div>
         </aside>
@@ -295,3 +360,6 @@ export default function Home() {
     </main>
   );
 }
+
+export default withAuthenticator(Home);
+

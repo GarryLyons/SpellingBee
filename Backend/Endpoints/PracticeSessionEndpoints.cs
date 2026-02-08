@@ -8,7 +8,20 @@ public static class PracticeSessionEndpoints
 {
     public static RouteGroupBuilder MapPracticeSessionEndpoints(this RouteGroupBuilder apiGroup)
     {
-        var sessionsGroup = apiGroup.MapGroup("/practice-sessions").WithTags("Practice Sessions");
+        var sessionsGroup = apiGroup.MapGroup("/practice-sessions").WithTags("Practice Sessions").RequireAuthorization();
+
+        sessionsGroup.MapGet("/", (PracticeSessionStore sessionStore) =>
+        {
+            var sessions = sessionStore.GetAll()
+                .Select(s => new PracticeSessionSummary(
+                    s.Id,
+                    s.CreatedAt,
+                    s.WordIds.Count,
+                    s.State.Progress.Count(k => k.Value.DueIn > 0), // Simple metric for progress
+                    s.State.Cycle
+                ));
+            return Results.Ok(sessions);
+        });
 
         sessionsGroup.MapPost("/", (
             CreatePracticeSessionRequest request,

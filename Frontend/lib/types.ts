@@ -8,6 +8,14 @@ export interface PhonicsBreakdown {
   rules: string[];
 }
 
+export interface PracticeSessionSummary {
+  id: string;
+  createdAt: string;
+  wordCount: number;
+  completedWords: number;
+  cycle: number;
+}
+
 export type SegmentationLevel =
   | "whole_word"
   | "morphological_units"

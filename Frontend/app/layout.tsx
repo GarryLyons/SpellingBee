@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Baloo_2, Nunito } from "next/font/google";
+import ConfigureAmplify from "@/app/components/ConfigureAmplify";
 import "./globals.css";
 
 const headingFont = Baloo_2({
@@ -26,7 +27,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${headingFont.variable} ${bodyFont.variable}`}>{children}</body>
+      <body className={`${headingFont.variable} ${bodyFont.variable}`}>
+        <ConfigureAmplify />
+        {children}
+      </body>
     </html>
   );
 }

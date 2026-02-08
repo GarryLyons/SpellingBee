@@ -1,0 +1,12 @@
+{
+  "name": "spelling-bee-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:backend": "dotnet build Backend/Backend.csproj",
+    "start:backend": "cd Backend && dotnet run",
+    "install:frontend": "cd Frontend && npm install",
+    "start:frontend": "cd Frontend && npm run dev",
+    "build:frontend": "cd Frontend && npm run build"
+  }
+}
